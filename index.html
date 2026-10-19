@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Someone sent you a hug</title>
+  <meta name="description" content="Your bear has a Valentine's message just for you. Tap to open it."/>
+  <meta name="theme-color" content="#2A0E1B"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta property="og:title" content="Someone sent you a hug"/>
+  <meta property="og:description" content="Your bear has a Valentine's message just for you. Tap to open it."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="https://d2ol7oe51mr4n9.cloudfront.net/user_3FCWtuihyJcrMLqsdB6d83qr24k/6ce7697f-e733-4027-8b1d-1e3e952aff08.jpg"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://d2ol7oe51mr4n9.cloudfront.net"/>
+  <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3FCWtuihyJcrMLqsdB6d83qr24k/88922299-b1eb-4ee4-8c29-ce46f23af6c4.jpg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap"/>
+  <!--
+    Bumbleton Hugs: the page an NFC chip inside the bear opens.
+    One screen, three states: closed (tap to open), playing, ended.
+    Phones only allow video WITH sound after a tap, so the big button
+    is the gesture that lets the bear speak.
+  -->
+  <style>
+    :root {
+      --plum: #2a0e1b; --velvet: #5b1a33; --rose: #e8577a; --rose-deep: #c63f63;
+      --blush: #f7c6d3; --cream: #fff5f1;
+      --round: "Baloo 2", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+      --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(120% 80% at 50% 0%, var(--velvet) 0%, var(--plum) 64%) var(--plum);
+      color: var(--cream); font-family: var(--ui); overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* 9:16 stage: fills a phone, becomes a tall card on wider screens. */
+    .stage {
+      position: relative; overflow: hidden; background: #1a0811;
+      width: min(100vw, calc(100dvh * 9 / 16));
+      height: min(100dvh, calc(100vw * 16 / 9));
+    }
+    @media (min-aspect-ratio: 10/16) {
+      .stage {
+        height: min(92dvh, calc(100vw * 16 / 9));
+        width: calc(min(92dvh, calc(100vw * 16 / 9)) * 9 / 16);
+        border-radius: 28px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08);
+      }
+    }
+    video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #1a0811; }
+
+    .veil {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end; text-align: center;
+      padding: 28px 24px calc(44px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(42,14,27,.1) 0%, rgba(42,14,27,.35) 42%, rgba(30,9,19,.92) 100%);
+      transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1);
+    }
+    .veil[data-open="false"] { opacity: 0; transform: translateY(-6%); pointer-events: none; }
+    .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--blush); }
+    .title { font-family: var(--round); font-weight: 800; font-size: clamp(32px, 9vw, 44px); line-height: 1.02; margin: 10px 0 8px; }
+    .sub { font-size: 16px; line-height: 1.45; color: var(--blush); max-width: 28ch; }
+
+    .unwrap {
+      margin-top: 28px; display: inline-flex; align-items: center; gap: 12px;
+      border: 0; cursor: pointer; color: #fff; background: var(--rose);
+      font-family: var(--round); font-weight: 800; font-size: 20px;
+      padding: 16px 30px 16px 20px; border-radius: 999px;
+      box-shadow: 0 14px 34px rgba(232,87,122,.45), inset 0 -4px 0 var(--rose-deep);
+      animation: beat 1.7s ease-in-out infinite;
+    }
+    .unwrap:active { transform: scale(.95); }
+    .unwrap svg { width: 32px; height: 32px; flex: none; }
+    @keyframes beat { 0%,100% { transform: scale(1); } 12% { transform: scale(1.06); } 24% { transform: scale(1); } 36% { transform: scale(1.035); } }
+
+    .row { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; justify-content: center; }
+    .again {
+      border: 0; cursor: pointer; background: var(--rose); color: #fff;
+      font-family: var(--round); font-weight: 800; font-size: 17px;
+      padding: 13px 24px; border-radius: 999px; box-shadow: inset 0 -3px 0 var(--rose-deep);
+    }
+    .share {
+      cursor: pointer; background: rgba(255,255,255,.1); color: var(--cream);
+      border: 1.5px solid rgba(255,245,241,.55); font-family: var(--round); font-weight: 700; font-size: 17px;
+      padding: 12px 22px; border-radius: 999px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .mute {
+      position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px;
+      width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+      display: none; place-items: center; color: #fff; background: rgba(20,6,12,.4);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .stage.playing .mute { display: grid; }
+    .mute svg { width: 22px; height: 22px; }
+    .unwrap:focus-visible, .again:focus-visible, .share:focus-visible, .mute:focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; }
+    .error { margin-top: 16px; font-size: 14px; color: var(--blush); }
+    [hidden] { display: none !important; }
+    @media (prefers-reduced-motion: reduce) { .unwrap { animation: none; } .veil { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <video id="vid" playsinline webkit-playsinline preload="auto"
+      poster="https://d2ol7oe51mr4n9.cloudfront.net/user_3FCWtuihyJcrMLqsdB6d83qr24k/88922299-b1eb-4ee4-8c29-ce46f23af6c4.jpg"
+      src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FCWtuihyJcrMLqsdB6d83qr24k/1f894f20-9cdf-41ca-8660-d994e08c6f3f.mp4"
+      aria-label="A Valentine's message from your bear"></video>
+
+    <section class="veil" id="start" data-open="true">
+      <div class="eyebrow">Happy Valentine's Day</div>
+      <h1 class="title">Someone sent you a hug</h1>
+      <p class="sub">Your bear has a little message, just for you.</p>
+      <button class="unwrap" id="playBtn" type="button">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path fill="#fff" d="M16 28.5S3 20.6 3 11.6C3 7.4 6.2 4 10.2 4c2.5 0 4.6 1.3 5.8 3.3C17.2 5.3 19.3 4 21.8 4 25.8 4 29 7.4 29 11.6c0 9-13 16.9-13 16.9z"/>
+          <path fill="#E8577A" d="M13.4 11.2v9.6l7.4-4.8z"/>
+        </svg>
+        Tap to open your hug
+      </button>
+      <p class="error" id="err" role="status" hidden>The video didn't load. Check your connection and tap again.</p>
+    </section>
+
+    <section class="veil" id="end" data-open="false">
+      <div class="eyebrow">Happy Valentine's Day</div>
+      <h2 class="title">Sending love right back</h2>
+      <div class="row">
+        <button class="again" id="againBtn" type="button">Watch again</button>
+        <button class="share" id="shareBtn" type="button" hidden>Share the hug</button>
+      </div>
+    </section>
+
+    <button class="mute" id="muteBtn" type="button" aria-label="Turn sound off">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/>
+        <path id="soundOn" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
+        <path id="soundOff" d="m16 9 5 6M21 9l-5 6" style="display:none"/>
+      </svg>
+    </button>
+  </main>
+
+  <script>
+    (function () {
+      var vid = document.getElementById('vid');
+      var stage = document.getElementById('stage');
+      var start = document.getElementById('start');
+      var end = document.getElementById('end');
+      var err = document.getElementById('err');
+      var muteBtn = document.getElementById('muteBtn');
+      var shareBtn = document.getElementById('shareBtn');
+
+      function show(phase) {
+        start.dataset.open = String(phase === 'closed');
+        end.dataset.open = String(phase === 'ended');
+        stage.classList.toggle('playing', phase === 'playing');
+      }
+      function syncMute() {
+        document.getElementById('soundOn').style.display = vid.muted ? 'none' : '';
+        document.getElementById('soundOff').style.display = vid.muted ? '' : 'none';
+        muteBtn.setAttribute('aria-label', vid.muted ? 'Turn sound on' : 'Turn sound off');
+      }
+      function play(fromStart) {
+        err.hidden = true;
+        if (fromStart) vid.currentTime = 0;
+        vid.muted = false;
+        var p = vid.play();
+        if (p && p.catch) {
+          p.catch(function () {
+            // A few browsers still refuse sound; start muted rather than not at all.
+            vid.muted = true;
+            syncMute();
+            vid.play().catch(function () { err.hidden = false; });
+          });
+        }
+      }
+
+      document.getElementById('playBtn').addEventListener('click', function () { play(false); });
+      document.getElementById('againBtn').addEventListener('click', function () { play(true); });
+      muteBtn.addEventListener('click', function () { vid.muted = !vid.muted; syncMute(); });
+      vid.addEventListener('click', function () { if (!vid.paused) { vid.pause(); show('closed'); } });
+      vid.addEventListener('playing', function () { show('playing'); syncMute(); });
+      vid.addEventListener('ended', function () { show('ended'); });
+      vid.addEventListener('error', function () { show('closed'); err.hidden = false; });
+
+      if (navigator.share) {
+        shareBtn.hidden = false;
+        shareBtn.addEventListener('click', function () {
+          navigator.share({ title: 'Someone sent you a hug', url: location.href }).catch(function () {});
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
